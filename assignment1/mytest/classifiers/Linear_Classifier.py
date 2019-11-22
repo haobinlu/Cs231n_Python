@@ -1,5 +1,6 @@
 import numpy as np
-from mytest.classifiers import Linear_SVM
+from classifiers import Linear_SVM
+from classifiers import SoftMax
 
 class LinearClassifier(object):
     def __init__(self):
@@ -31,3 +32,8 @@ class LinearSVM(LinearClassifier):
     #这是LinearClassifier的子类
     def loss(self, X_batch, Y_batch, reg):
         return Linear_SVM.svm_loss(self.W, X_batch, Y_batch, reg)
+
+class LinearSoftMax(LinearClassifier):
+    #这是LinearClassifier的子类
+    def loss(self, X_batch, Y_batch, reg):
+        return SoftMax.softmax_loss_vectorized(self.W, X_batch, Y_batch, reg)
