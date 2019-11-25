@@ -43,7 +43,7 @@ class TwoLayerNet(object):
         self.params['W2'] = std * np.random.randn(hidden_size, output_size)
         self.params['b2'] = np.zeros(output_size)
 
-    def loss(self, X, y=None, reg=0.0):
+    def loss(self, X, y=None, reg=1.0):
         """
         Compute the loss and gradients for a two layer fully connected neural
         network.
@@ -80,7 +80,17 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        fc1_activation = np.dot(X, W1) + b1
+
+        # Relu layer.
+        relu_1_activation = fc1_activation
+        relu_1_activation[relu_1_activation < 0] = 0
+
+        # FC2 layer.
+        fc2_activation = np.dot(relu_1_activation, W2) + b2
+
+        # Output scores.
+        scores = fc2_activation
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -98,7 +108,19 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        shift_scores = scores - np.max(scores, axis=1)[..., np.newaxis]
+
+        # Calculate softmax scores.
+        softmax_scores = np.exp(shift_scores) / np.sum(np.exp(shift_scores), axis=1)[..., np.newaxis]
+
+        # Calculate our cross entropy Loss.
+        correct_class_scores = np.choose(y, shift_scores.T)  # Size N vector
+        loss = -correct_class_scores + np.log(np.sum(np.exp(shift_scores), axis=1))
+        loss = np.sum(loss)
+
+        # Average the loss & add the regularisation loss: lambda*sum(weights.^2).
+        loss /= N
+        loss += reg * (np.sum(W1 * W1) + np.sum(W2 * W2) + np.sum(b1 * b1) + np.sum(b2 * b2))
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -111,7 +133,33 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        dSoft = softmax_scores
+        dSoft[range(N), y] = dSoft[range(N), y] - 1
+        dSoft /= N  # Average over batch.
+
+        # Backprop dScore to calculate dW2 and add regularisation derivative.
+        dW2 = np.dot(relu_1_activation.T, dSoft)
+        dW2 += 2 * reg * W2
+
+        grads['W2'] = dW2
+
+        # Backprop dScore to calculate db2.
+        db2 = dSoft * 1
+        grads['b2'] = np.sum(db2, axis=0)
+
+        # Calculate dx2 and backprop to calculate dRelu1.
+        dx2 = np.dot(dSoft, W2.T)
+        relu_mask = (relu_1_activation > 0)
+        dRelu1 = relu_mask * dx2
+
+        # Backprop dRelu1 to calculate dW1 and add regularisation derivative.
+        dW1 = np.dot(X.T, dRelu1)
+        dW1 += 2 * reg * W1
+        grads['W1'] = dW1
+
+        # Backprop dRelu1 to calculate db1.
+        db1 = dRelu1 * 1
+        grads['b1'] = np.sum(db1, axis=0)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -156,7 +204,9 @@ class TwoLayerNet(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            batch_index = np.random.choice(range(X.shape[0]), batch_size)
+            X_batch = X[batch_index]
+            y_batch = y[batch_index]
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -172,7 +222,8 @@ class TwoLayerNet(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            for W in self.params:
+                self.params[W] -= learning_rate * grads[W]
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -218,7 +269,12 @@ class TwoLayerNet(object):
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        f1 = X @ self.params['W1'] + self.params['b1']
+        h = np.maximum(0, f1)
+        f2 = h @ self.params['W2'] + self.params['b2']
+        P = np.exp(f2) / np.sum(np.exp(f2), axis=1)[..., np.newaxis]
+        y_pred = np.argmax(P, axis= 1)
+
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
